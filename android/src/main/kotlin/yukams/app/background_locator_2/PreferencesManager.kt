@@ -24,10 +24,10 @@ class PreferencesManager {
         fun saveSettings(context: Context, map: Map<Any, Any>) {
             val sharedPreferences =
                     context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
-
+            val callback = map[Keys.ARG_CALLBACK] as Number
             sharedPreferences.edit()
                     .putLong(Keys.ARG_CALLBACK,
-                            map[Keys.ARG_CALLBACK] as Long)
+                            callback.toLong())
                     .apply()
 
             if (map[Keys.ARG_NOTIFICATION_CALLBACK] as? Long != null) {
