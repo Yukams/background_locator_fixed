@@ -14,7 +14,7 @@ import 'location_dto.dart';
 
 class BackgroundLocator {
   static const MethodChannel _channel = const MethodChannel(Keys.CHANNEL_ID);
-
+  @pragma('vm:entry-point')
   static Future<void> initialize() async {
     final CallbackHandle callback =
         PluginUtilities.getCallbackHandle(callbackDispatcher)!;
