@@ -24,6 +24,8 @@ class BackgroundLocator {
 
   static WidgetsBinding? get _widgetsBinding => WidgetsBinding.instance;
 
+  static AutoStopHandler? _observer;
+
   static Future<void> registerLocationUpdate(
       void Function(LocationDto) callback,
       {void Function(Map<String, dynamic>)? initCallback,
@@ -33,7 +35,8 @@ class BackgroundLocator {
       AndroidSettings androidSettings = const AndroidSettings(),
       IOSSettings iosSettings = const IOSSettings()}) async {
     if (autoStop) {
-      _widgetsBinding!.addObserver(AutoStopHandler());
+      _observer = AutoStopHandler();
+      _widgetsBinding!.addObserver(_observer!);
     }
 
     final args = SettingsUtil.getArgumentsMap(
@@ -50,6 +53,10 @@ class BackgroundLocator {
 
   static Future<void> unRegisterLocationUpdate() async {
     await _channel.invokeMethod(Keys.METHOD_PLUGIN_UN_REGISTER_LOCATION_UPDATE);
+
+    if (_observer != null) {
+      _widgetsBinding!.removeObserver(_observer!);
+    }
   }
 
   static Future<bool> isRegisterLocationUpdate() async {
