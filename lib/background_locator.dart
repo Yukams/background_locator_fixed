@@ -7,7 +7,7 @@ import 'package:background_locator_2/utils/settings_util.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
-import 'auto_stop_handler.dart';
+import 'local_observer.dart';
 import 'callback_dispatcher.dart';
 import 'keys.dart';
 import 'location_dto.dart';
@@ -24,20 +24,22 @@ class BackgroundLocator {
 
   static WidgetsBinding? get _widgetsBinding => WidgetsBinding.instance;
 
-  static AutoStopHandler? _observer;
+  static LocalObserver? _observer;
 
+  /// [autoStart] Restart the background locator when it stops in the
+  /// [AppLifecycleState.inactive] or [AppLifecycleState.paused] states.
+  /// It is only possible to use autoStart if autoStop is enabled.
   static Future<void> registerLocationUpdate(
       void Function(LocationDto) callback,
       {void Function(Map<String, dynamic>)? initCallback,
       Map<String, dynamic> initDataCallback = const {},
       void Function()? disposeCallback,
       bool autoStop = false,
+      bool autoStart = false,
       AndroidSettings androidSettings = const AndroidSettings(),
       IOSSettings iosSettings = const IOSSettings()}) async {
-    if (autoStop) {
-      _observer = AutoStopHandler();
-      _widgetsBinding!.addObserver(_observer!);
-    }
+    assert(autoStart ? autoStop : true,
+        'It is only possible to use autoStart if autoStop is enabled');
 
     final args = SettingsUtil.getArgumentsMap(
         callback: callback,
@@ -47,12 +49,17 @@ class BackgroundLocator {
         androidSettings: androidSettings,
         iosSettings: iosSettings);
 
-    await _channel.invokeMethod(
-        Keys.METHOD_PLUGIN_REGISTER_LOCATION_UPDATE, args);
+    _registerLocalObserver(
+      autoStart: autoStart,
+      autoStop: autoStop,
+      args: args,
+    );
+
+    await _registerLocationUpdateMethod(args: args);
   }
 
   static Future<void> unRegisterLocationUpdate() async {
-    await _channel.invokeMethod(Keys.METHOD_PLUGIN_UN_REGISTER_LOCATION_UPDATE);
+    await _unRegisterLocationUpdateMethod();
 
     if (_observer != null) {
       _widgetsBinding!.removeObserver(_observer!);
@@ -86,5 +93,34 @@ class BackgroundLocator {
     }
 
     await _channel.invokeMethod(Keys.METHOD_PLUGIN_UPDATE_NOTIFICATION, arg);
+  }
+
+  static Future<void> _registerLocationUpdateMethod(
+      {required Map<String, dynamic> args}) async {
+    await _channel.invokeMethod(
+        Keys.METHOD_PLUGIN_REGISTER_LOCATION_UPDATE, args);
+  }
+
+  static Future<void> _unRegisterLocationUpdateMethod() async {
+    await _channel.invokeMethod(Keys.METHOD_PLUGIN_UN_REGISTER_LOCATION_UPDATE);
+  }
+
+  static void _registerLocalObserver({
+    required bool autoStop,
+    required bool autoStart,
+    required Map<String, dynamic> args,
+  }) {
+    if (autoStop) {
+      _observer = LocalObserver(
+        stopCallback: () async => await unRegisterLocationUpdate(),
+        temporaryStopCallback: () async => autoStart
+            ? await _unRegisterLocationUpdateMethod()
+            : await unRegisterLocationUpdate(),
+        startCallback: autoStart
+            ? () async => _registerLocationUpdateMethod(args: args)
+            : null,
+      );
+      _widgetsBinding!.addObserver(_observer!);
+    }
   }
 }
