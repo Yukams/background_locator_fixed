@@ -23,21 +23,12 @@ class PreferencesManager {
         @JvmStatic
         fun saveSettings(context: Context, map: Map<Any, Any>) {
             val sharedPreferences =
-                    context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+                    context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)           
 
-           
-
-        if(map[Keys.ARG_CALLBACK] as? Int != null) {
-                 val callback = map[Keys.ARG_CALLBACK] as Int
-print("int je")
-                sharedPreferences.edit()
+       sharedPreferences.edit()
                         .putInt(Keys.ARG_CALLBACK,
                                 map[Keys.ARG_CALLBACK] as Int)
                         .apply()
-        }
-        else {
-                print("nije int")
-        }
 
             if (map[Keys.ARG_NOTIFICATION_CALLBACK] as? Long != null) {
                 sharedPreferences.edit()
