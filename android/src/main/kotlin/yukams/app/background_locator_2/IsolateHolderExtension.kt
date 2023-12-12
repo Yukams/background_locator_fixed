@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Process
 import android.util.Log
 import com.google.android.gms.location.LocationRequest
 import io.flutter.FlutterInjector
@@ -24,13 +25,11 @@ internal fun IsolateHolderService.startLocatorService(context: Context) {
     synchronized(serviceStarted) {
         this.context = context
         // resetting the background engine to avoid being stuck after an app crash
-        IsolateHolderService.backgroundEngine?.destroy();
+        IsolateHolderService.backgroundEngine?.destroy()
         IsolateHolderService.backgroundEngine = null
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
-                context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
-                == PackageManager.PERMISSION_GRANTED
-            ) {
+            if (context.checkPermission("android.permission.ACCESS_FINE_LOCATION", Process.myPid(), Process.myUid())
+                == PackageManager.PERMISSION_GRANTED) {
                 // We need flutter engine to handle callback, so if it is not available we have to create a
                 // Flutter engine without any view
                 Log.e("IsolateHolderService", "startLocatorService: Start Flutter Engine")
@@ -44,7 +43,7 @@ internal fun IsolateHolderService.startLocatorService(context: Context) {
                 val callbackInfo =
                     FlutterCallbackInformation.lookupCallbackInformation(callbackHandle)
 
-                if(callbackInfo == null) {
+                if (callbackInfo == null) {
                     Log.e("IsolateHolderExtension", "Fatal: failed to find callback");
                     return;
                 }
@@ -70,8 +69,7 @@ internal fun IsolateHolderService.startLocatorService(context: Context) {
                 Keys.BACKGROUND_CHANNEL_ID
             )
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
-                context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+            if (context.checkPermission("Manifest.permission.ACCESS_FINE_LOCATION", Process.myPid(), Process.myUid())
                 == PackageManager.PERMISSION_GRANTED
             ) {
                 backgroundChannel.setMethodCallHandler(this)

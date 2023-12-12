@@ -42,7 +42,7 @@ static BackgroundLocatorPlugin *instance = nil;
     if (_callbackChannel == nil || isolateId == nil) {
         return;
     }
-    
+
     [_callbackChannel invokeMethod:method arguments:arguments];
 }
 
@@ -67,7 +67,7 @@ didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
         [PreferencesManager setObservingRegion:NO];
         [_locationManager startUpdatingLocation];
     }
-    
+
     // Note: if we return NO, this vetos the launch of the application.
     return YES;
 }
@@ -98,7 +98,7 @@ didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
 - (void) prepareLocationMap:(CLLocation*) location {
     _lastLocation = location;
     NSDictionary<NSString*,NSNumber*>* locationMap = [Util getLocationMap:location];
-    
+
     [self sendLocationEvent:locationMap];
 }
 
@@ -120,13 +120,19 @@ didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
     [_locationManager startUpdatingLocation];
 }
 
+- (void)locationManager:(CLLocationManager *)manager didChangeAuthorizationStatus:(CLAuthorizationStatus)status {
+    if (status == kCLAuthorizationStatusAuthorizedWhenInUse) {
+        [self->_locationManager requestAlwaysAuthorization];
+    }
+}
+
 #pragma mark LocatorPlugin Methods
 - (void) sendLocationEvent: (NSDictionary<NSString*,NSNumber*>*)location {
     NSString *isolateId = [_headlessRunner isolateId];
     if (_callbackChannel == nil || isolateId == nil) {
         return;
     }
-    
+
     NSDictionary *map = @{
                      kArgCallback : @([PreferencesManager getCallbackHandle:kCallbackKey]),
                      kArgLocation: location
@@ -136,15 +142,15 @@ didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
 
 - (instancetype)init:(NSObject<FlutterPluginRegistrar> *)registrar {
     self = [super init];
-    
+
     _headlessRunner = [[FlutterEngine alloc] initWithName:@"LocatorIsolate" project:nil allowHeadlessExecution:YES];
     _registrar = registrar;
     [self prepareLocationManager];
-    
+
     _mainChannel = [FlutterMethodChannel methodChannelWithName:kChannelId
                                                binaryMessenger:[registrar messenger]];
     [registrar addMethodCallDelegate:self channel:_mainChannel];
-    
+
     _callbackChannel =
     [FlutterMethodChannel methodChannelWithName:kBackgroundChannelId
                                 binaryMessenger:[_headlessRunner binaryMessenger] ];
@@ -163,7 +169,7 @@ didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
     [PreferencesManager setCallbackDispatcherHandle:handle];
     FlutterCallbackInformation *info = [FlutterCallbackCache lookupCallbackInformation:handle];
     NSAssert(info != nil, @"failed to find callback");
-    
+
     NSString *entrypoint = info.callbackName;
     NSString *uri = info.callbackLibraryPath;
     [_headlessRunner runWithEntrypoint:entrypoint libraryURI:uri];
@@ -185,8 +191,12 @@ didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
   initialDataDictionary:(NSDictionary*)initialDataDictionary
         disposeCallback:(int64_t)disposeCallback
                settings: (NSDictionary*)settings {
-    [self->_locationManager requestAlwaysAuthorization];
-        
+    [self->_locationManager requestWhenInUseAuthorization];
+
+//    if(_locationManager.authorizationStatus != kCLAuthorizationStatusAuthorized) {
+//        [self->_locationManager requestAlwaysAuthorization];
+//    }
+
     long accuracyKey = [[settings objectForKey:kSettingsAccuracy] longValue];
     CLLocationAccuracy accuracy = [Util getAccuracy:accuracyKey];
     double distanceFilter= [[settings objectForKey:kSettingsDistanceFilter] doubleValue];
@@ -195,27 +205,28 @@ didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
 
     _locationManager.desiredAccuracy = accuracy;
     _locationManager.distanceFilter = distanceFilter;
-    
+
     if (@available(iOS 11.0, *)) {
       _locationManager.showsBackgroundLocationIndicator = showsBackgroundLocationIndicator;
     }
-    
+
     if (@available(iOS 9.0, *)) {
         _locationManager.allowsBackgroundLocationUpdates = YES;
+        _locationManager.pausesLocationUpdatesAutomatically = false;
     }
-    
+
     [PreferencesManager saveDistanceFilter:distanceFilter];
     [PreferencesManager setStopWithTerminate:stopWithTerminate];
 
     [PreferencesManager setCallbackHandle:callback key:kCallbackKey];
-    
+
     InitPluggable *initPluggable = [[InitPluggable alloc] init];
     [initPluggable setCallback:initCallback];
     [initPluggable onServiceStart:initialDataDictionary];
-    
+
     DisposePluggable *disposePluggable = [[DisposePluggable alloc] init];
     [disposePluggable setCallback:disposeCallback];
-        
+
     [_locationManager startUpdatingLocation];
     [_locationManager startMonitoringSignificantLocationChanges];
 }
@@ -224,21 +235,21 @@ didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
     if (_locationManager == nil) {
         return;
     }
-    
+
     @synchronized (self) {
         [_locationManager stopUpdatingLocation];
-        
+
         if (@available(iOS 9.0, *)) {
             _locationManager.allowsBackgroundLocationUpdates = NO;
         }
-        
+
         [_locationManager stopMonitoringSignificantLocationChanges];
 
         for (CLRegion* region in [_locationManager monitoredRegions]) {
             [_locationManager stopMonitoringForRegion:region];
         }
     }
-    
+
     DisposePluggable *disposePluggable = [[DisposePluggable alloc] init];
     [disposePluggable onServiceDispose];
 }

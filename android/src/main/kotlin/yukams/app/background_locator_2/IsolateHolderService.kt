@@ -5,6 +5,7 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.Process
 import android.os.Handler
 import android.os.IBinder
 import android.os.PowerManager
@@ -21,7 +22,6 @@ import yukams.app.background_locator_2.pluggables.InitPluggable
 import yukams.app.background_locator_2.pluggables.Pluggable
 import yukams.app.background_locator_2.provider.*
 import java.util.HashMap
-import androidx.core.app.ActivityCompat
 
 class IsolateHolderService : MethodChannel.MethodCallHandler, LocationUpdateListener, Service() {
     companion object {
@@ -140,8 +140,8 @@ class IsolateHolderService : MethodChannel.MethodCallHandler, LocationUpdateList
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.e("IsolateHolderService", "onStartCommand => intent.action : ${intent?.action}")
         if(intent == null) {
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
-                || ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            if (context?.checkPermission("Manifest.permission.ACCESS_FINE_LOCATION", Process.myPid(), Process.myUid()) != PackageManager.PERMISSION_GRANTED
+                || context?.checkPermission("Manifest.permission.ACCESS_COARSE_LOCATION", Process.myPid(), Process.myUid()) != PackageManager.PERMISSION_GRANTED) {
                 Log.e("IsolateHolderService", "app has crashed, stopping it")
                 stopSelf()
             }
