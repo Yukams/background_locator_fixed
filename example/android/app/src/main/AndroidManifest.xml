@@ -9,6 +9,7 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
 
 
     <!-- io.flutter.app.FlutterApplication is an android.app.Application that
@@ -29,6 +30,7 @@
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize"
+            android:exported="true"
             >
             <meta-data
                 android:name="io.flutter.embedding.android.SplashScreenDrawable"
@@ -43,7 +45,9 @@
             </intent-filter>
         </activity>
         <receiver android:name="yukams.app.background_locator_2.BootBroadcastReceiver"
-            android:enabled="true">
+            android:enabled="true"
+            android:exported="true"
+            >
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED"/>
             </intent-filter>
