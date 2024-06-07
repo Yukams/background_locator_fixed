@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Process
 import android.os.Handler
 import android.util.Log
 import androidx.core.content.ContextCompat
@@ -80,10 +81,16 @@ class BackgroundLocatorPlugin
 
             val settings = args[Keys.ARG_SETTINGS] as Map<*, *>
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
-                    context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
-                    == PackageManager.PERMISSION_DENIED) {
-
+//            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
+//                    context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+//                    == PackageManager.PERMISSION_DENIED) {
+//
+//                val msg = "'registerLocator' requires the ACCESS_FINE_LOCATION permission."
+//                result?.error(msg, null, null)
+//                return
+//            }
+            if (context.checkPermission("android.permission.ACCESS_FINE_LOCATION", Process.myPid(), Process.myUid())
+                == PackageManager.PERMISSION_DENIED) {
                 val msg = "'registerLocator' requires the ACCESS_FINE_LOCATION permission."
                 result?.error(msg, null, null)
                 return
@@ -207,8 +214,7 @@ class BackgroundLocatorPlugin
             initializeService(context, args)
 
             val settings = args[Keys.ARG_SETTINGS] as Map<*, *>
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
-                context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+            if (context.checkPermission("Manifest.permission.ACCESS_FINE_LOCATION", Process.myPid(), Process.myUid())
                 == PackageManager.PERMISSION_GRANTED
             ) {
                 startIsolateService(context, settings)
