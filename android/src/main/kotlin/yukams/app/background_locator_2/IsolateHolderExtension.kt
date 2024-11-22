@@ -9,6 +9,8 @@ import android.util.Log
 import com.google.android.gms.location.LocationRequest
 import io.flutter.FlutterInjector
 import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.embedding.engine.FlutterEngineGroup
+import io.flutter.embedding.engine.FlutterEngineGroupCache
 import io.flutter.embedding.engine.dart.DartExecutor
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.view.FlutterCallbackInformation
@@ -34,7 +36,6 @@ internal fun IsolateHolderService.startLocatorService(context: Context) {
                 // We need flutter engine to handle callback, so if it is not available we have to create a
                 // Flutter engine without any view
                 Log.e("IsolateHolderService", "startLocatorService: Start Flutter Engine")
-                IsolateHolderService.backgroundEngine = FlutterEngine(context)
 
                 val callbackHandle = context.getSharedPreferences(
                     Keys.SHARED_PREFERENCES_KEY,
@@ -49,12 +50,25 @@ internal fun IsolateHolderService.startLocatorService(context: Context) {
                     return;
                 }
 
-                val args = DartExecutor.DartCallback(
-                    context.assets,
+                val dartEntrypoint = DartExecutor.DartEntrypoint(
                     FlutterInjector.instance().flutterLoader().findAppBundlePath(),
-                    callbackInfo
+                    "package:background_locator_2/background_locator.dart",
+                    "entrypoint"
                 )
-                IsolateHolderService.backgroundEngine?.dartExecutor?.executeDartCallback(args)
+                val args = mutableListOf<String>()
+                args.add(callbackHandle.toString())
+                val engineGroupCache = FlutterEngineGroupCache.getInstance()
+                val engineGroup = engineGroupCache.get("main") ?: run {
+                    val newEngineGroup = FlutterEngineGroup(this)
+                    engineGroupCache.put("main", newEngineGroup)
+                    newEngineGroup
+                }
+                IsolateHolderService.backgroundEngine = engineGroup.createAndRunEngine(
+                    FlutterEngineGroup.Options(this)
+                        .setDartEntrypoint(dartEntrypoint)
+                        .setDartEntrypointArgs(args)
+                )
+
                 isServiceInitialized = true
                 Log.e("IsolateHolderExtension", "service initialized")
             }

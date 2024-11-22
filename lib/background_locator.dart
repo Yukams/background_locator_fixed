@@ -12,6 +12,17 @@ import 'callback_dispatcher.dart';
 import 'keys.dart';
 import 'location_dto.dart';
 
+@pragma('vm:entry-point')
+Future<void> entrypoint(List<String> args) async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final int handle = int.parse(args.first);
+  final callbackHandle = CallbackHandle.fromRawHandle(handle);
+  final callback = PluginUtilities.getCallbackFromHandle(callbackHandle);
+  if (callback != null) {
+    callback();
+  }
+}
+
 class BackgroundLocator {
   static const MethodChannel _channel = const MethodChannel(Keys.CHANNEL_ID);
 
